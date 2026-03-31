@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Dashboard | AI Job Fraud Detection</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dash-shell">
+    <div class="dash-bg-mesh"></div>
+    <div class="dash-grid">
+        <!-- Fixed Sidebar -->
+        <aside class="dash-sidebar" id="dash-sidebar">
+            <div class="sidebar-head">
+                <div class="brand-mark">
+                    <i class="fa fa-shield-halved"></i>
+                </div>
+                <span class="brand-title">AI Fraud</span>
+                <button class="icon-btn ghost toggle-sidebar" id="sidebar-close" aria-label="Close menu">
+                    <i class="fa fa-chevron-left"></i>
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-link active"><i class="fa fa-grid-2"></i><span>Dashboard</span></a>
+                <a href="/submit-job" class="nav-link"><i class="fa fa-plus-circle"></i><span>Submit Job</span></a>
+                <a href="/chat" class="nav-link"><i class="fa fa-robot"></i><span>Ask Gemini</span></a>
+                <a href="{{ url_for('generate_report') }}" class="nav-link"><i class="fa fa-file-arrow-down"></i><span>PDF report</span></a>
+                <a href="/feedback" class="nav-link"><i class="fa fa-comment-dots"></i><span>Feedback</span></a>
+                <a href="/logout" class="nav-link"><i class="fa fa-arrow-right-from-bracket"></i><span>Logout</span></a>
+            </nav>
+            <div class="sidebar-foot">
+                <p class="tiny-note">Signed in as</p>
+                <p class="sidebar-user">{{ session['username'] }}</p>
+            </div>
+        </aside>
+
+        <!-- Main Area -->
+        <main class="dash-main">
+            <header class="dash-topbar">
+                <div class="left">
+                    <button class="icon-btn ghost toggle-sidebar" id="sidebar-open" aria-label="Open menu">
+                        <i class="fa fa-bars"></i>
+                    </button>
+                    <div>
+                        <p class="eyebrow">Hello, {{ session['username'] }}</p>
+                        <h1>Fraud intelligence overview</h1>
+                    </div>
+                </div>
+                <div class="top-actions">
+                    <div class="sla-group">
+                        <span class="sla-badge"><i class="fa fa-gauge-high"></i> Avg time {{ '%.1f'|format(sla_avg_ms/1000) }}s</span>
+                        <span class="sla-badge uptime"><i class="fa fa-signal-bars"></i> Uptime {{ '%.2f'|format(sla_uptime) }}%</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Charts + Timeline -->
+            <section class="grid-panels">
+                <div class="panel glass lift">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow">Outcomes</p>
+                            <h3>Fraud vs real</h3>
+                        </div>
+                    </div>
+                    <canvas id="doughnutChart" class="chart-canvas" height="200"></canvas>
+                    <div class="loading-bar" aria-hidden="true"></div>
+                </div>
+
+                <div class="panel glass lift">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow">Submissions</p>
+                            <h3>30-day trend</h3>
+                        </div>
+                    </div>
+                    <canvas id="lineChart" class="chart-canvas" height="200"></canvas>
+                    <div class="loading-bar" aria-hidden="true"></div>
+                </div>
+            </section>
+
+            <!-- Analytics: Scatter & Heatmap -->
+            <section class="grid-panels">
+                <div class="panel glass lift">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow">Distribution</p>
+                            <h3>Word count vs rule score</h3>
+                        </div>
+                    </div>
+                    <canvas id="scatterChart" class="chart-canvas" height="200"></canvas>
+                    <div class="loading-bar" aria-hidden="true"></div>
+                </div>
+
+                <div class="panel glass lift">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow">Signals</p>
+                            <h3>Fake rate by signal</h3>
+                        </div>
+                    </div>
+                    <canvas id="heatmapChart" class="chart-canvas" height="200"></canvas>
+                    <div class="loading-bar" aria-hidden="true"></div>
+                </div>
+            </section>
+
+            <!-- Recent timeline -->
+            <section class="panel glass lift">
+                <div class="panel-head">
+                    <div>
+                        <p class="eyebrow">Recent submissions</p>
+                        <h3>Latest job checks</h3>
+                    </div>
+                </div>
+                {% if jobs %}
+                <div class="timeline modern">
+                    {% for job in jobs[:6] %}
+                    <div class="timeline-item">
+                        <div class="dot {{ 'red' if job['result']=='Fake' else 'green' }}"></div>
+                        <div class="timeline-card">
+                            <div class="timeline-top">
+                                <span class="pill {{ 'pill-red' if job['result']=='Fake' else 'pill-green' }}">{{ job['result'] }}</span>
+                                <small class="timestamp">{{ job['ts_local'] }}</small>
+                            </div>
+                            <p class="timeline-text">{{ job['description'][:140] }}{% if job['description']|length > 140 %}…{% endif %}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="muted">No submissions yet. Start with “Submit Job”.</p>
+                {% endif %}
+            </section>
+
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.4.0/dist/chartjs-chart-matrix.umd.min.js"></script>
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Sidebar toggle (mobile)
+        const body = document.body;
+        const sidebar = document.getElementById("dash-sidebar");
+        const openBtn = document.getElementById("sidebar-open");
+        const closeBtn = document.getElementById("sidebar-close");
+        const openSidebar = () => body.classList.add("sidebar-open");
+        const closeSidebar = () => body.classList.remove("sidebar-open");
+        openBtn?.addEventListener("click", openSidebar);
+        closeBtn?.addEventListener("click", closeSidebar);
+
+        // Chart data
+        const fraudCount = Number({{ fraud|default(0, true)|tojson }});
+        const totalCount = Number({{ total|default(0, true)|tojson }});
+        const realCount = Math.max(totalCount - fraudCount, 0);
+
+        // Normalize to percentages so the pie always sums to 100
+        const fraudPct = totalCount > 0 ? Math.round((fraudCount / totalCount) * 100) : 0;
+        const realPct = totalCount > 0 ? Math.max(0, 100 - fraudPct) : 0;
+
+        // Doughnut
+        const doughnutCtx = document.getElementById("doughnutChart");
+        if (doughnutCtx) {
+            new Chart(doughnutCtx, {
+                type: "doughnut",
+                data: {
+                    labels: ["Fraud", "Real"],
+                    datasets: [{
+                        data: [fraudPct, realPct],
+                        backgroundColor: ["#f87171", "#22d3ee"],
+                        borderWidth: 0,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: "62%",
+                    plugins: {
+                        legend: { labels: { color: "#e5e7eb" } }
+                    },
+                    animation: { duration: 900, easing: "easeOutQuart" }
+                }
+            });
+        }
+
+        // Line chart using recent jobs as binary series
+        const lineCtx = document.getElementById("lineChart");
+        const labels = {{ trend_labels|default([], true)|tojson|safe }};
+        const fakeSeries = {{ trend_fake|default([], true)|tojson|safe }};
+        const realSeries = {{ trend_real|default([], true)|tojson|safe }};
+        if (lineCtx && labels.length) {
+            new Chart(lineCtx, {
+                type: "line",
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: "Fake jobs (daily)",
+                            data: fakeSeries,
+                            fill: true,
+                            tension: 0.35,
+                            backgroundColor: "rgba(248,113,113,0.16)",
+                            borderColor: "#f87171",
+                            pointRadius: 4,
+                            pointBackgroundColor: "#f87171",
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: "Real jobs (daily)",
+                            data: realSeries,
+                            fill: true,
+                            tension: 0.35,
+                            backgroundColor: "rgba(34,211,238,0.14)",
+                            borderColor: "#22d3ee",
+                            pointRadius: 4,
+                            pointBackgroundColor: "#22d3ee",
+                            pointHoverRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { ticks: { color: "#9ca3af" }, beginAtZero: true, grace: 0.2 },
+                        x: { ticks: { color: "#9ca3af" } }
+                    },
+                    plugins: {
+                        legend: { labels: { color: "#e5e7eb" } },
+                        tooltip: { intersect: false, mode: "index" }
+                    },
+                    animation: { duration: 900, easing: "easeOutQuart" }
+                }
+            });
+        }
+
+        // Scatter: word count vs rule score
+        const scatterCtx = document.getElementById("scatterChart");
+        const scatterPoints = {{ scatter_points|default([], true)|tojson|safe }};
+        if (scatterCtx && scatterPoints.length) {
+            new Chart(scatterCtx, {
+                type: "scatter",
+                data: {
+                    datasets: [{
+                        label: "Checks",
+                        data: scatterPoints,
+                        parsing: false,
+                        backgroundColor: scatterPoints.map(p => p.label === "Fake" ? "rgba(248,113,113,0.6)" : "rgba(34,211,238,0.6)"),
+                        borderColor: scatterPoints.map(p => p.label === "Fake" ? "#f87171" : "#22d3ee"),
+                        pointRadius: 5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: "Word count", color:"#9ca3af" }, ticks:{color:"#9ca3af"} },
+                        y: { title: { display: true, text: "Rule score", color:"#9ca3af" }, ticks:{color:"#9ca3af"}, beginAtZero:true, grace:0.2 }
+                    },
+                    plugins: { legend: { display:false } }
+                }
+            });
+        }
+
+        // Fake rate per signal (horizontal bar for reliability)
+        const heatmapCtx = document.getElementById("heatmapChart");
+        const heatCells = {{ heatmap_cells|default([], true)|tojson|safe }};
+        if (heatmapCtx && heatCells.length) {
+            new Chart(heatmapCtx, {
+                type: "bar",
+                data: {
+                    labels: heatCells.map(c => c.signal),
+                    datasets: [{
+                        label: "Fake rate (%)",
+                        data: heatCells.map(c => c.rate),
+                        backgroundColor: heatCells.map(c => `rgba(248,113,113,${0.45 + Math.min(c.rate,100)/250})`),
+                        borderColor: "#f87171",
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: "y",
+                    scales: {
+                        x: { ticks:{color:"#9ca3af"}, beginAtZero:true, max:100 },
+                        y: { ticks:{color:"#e5e7eb"} }
+                    },
+                    plugins: {
+                        legend: { display:false },
+                        tooltip: { callbacks:{ label: ctx => `${ctx.raw}% fake rate` } }
+                    }
+                }
+            });
+        }
+    });
+    </script>
+</body>
+</html>
