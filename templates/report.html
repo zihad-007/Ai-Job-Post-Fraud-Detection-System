@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Job Submission Result</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Job Submission Result</h2>
+
+        <p><strong>Job Description:</strong></p>
+        <p>{{ job_text }}</p>
+
+        <p><strong>Prediction Result:</strong> 
+            <span class="{{ 'fake' if result=='Fake' else 'real' }}">{{ result }}</span>
+        </p>
+
+        <div class="btn-group">
+            <a href="{{ url_for('submit_job') }}" class="btn btn-submit">Submit Another Job</a>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-dashboard">Go to Dashboard</a>
+            <a href="{{ url_for('generate_report') }}" class="btn btn-report">Download PDF Report</a>
+        </div>
+    </div>
+</body>
+</html>
