@@ -1,15 +1,3 @@
-"""
-Quick environment probe to debug Gemini integration.
-
-Run:
-    python check_gemini_env.py
-
-It reports:
-    - Python executable in use
-    - google-genai import status and version
-    - whether GEMINI_API_KEY is set
-"""
-
 from __future__ import annotations
 
 import os
