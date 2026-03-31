@@ -1,9 +1,4 @@
-"""
-Lightweight Gemini smoke test that avoids hard‑coding credentials.
 
-The test only runs when `GEMINI_API_KEY` is present in the environment.
-Otherwise it is skipped so local/dev environments without keys do not fail.
-"""
 
 import os
 import pytest
