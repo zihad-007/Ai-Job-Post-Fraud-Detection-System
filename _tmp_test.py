@@ -87,7 +87,6 @@ FRAUD_KEYWORDS = [
 ]
 
 
-# ---------------- Stage 1: Job-post validation ----------------
 JOB_KEYWORDS = [
     "job",
     "hiring",
